@@ -17,7 +17,7 @@ public class HelloController {
     @GetMapping("/api/hello")
     public ResponseEntity<Map<String, Object>> hello() {
         RestTemplate restTemplate = new RestTemplate();
-        String fastapiUrl = fastapiBaseUrl + "ai/hello";
+        String fastapiUrl = fastapiBaseUrl + "/ai/hello";
 
         try {
             Map<String, Object> response = restTemplate.getForObject(fastapiUrl, Map.class);
