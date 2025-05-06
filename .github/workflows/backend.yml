@@ -1,0 +1,60 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 레포지토리 체크아웃
+        uses: actions/checkout@v3
+
+      - name: JDK 17 설정
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Gradle 캐시 설정
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Gradle 빌드
+        run: ./gradlew build
+
+      - name: jar 파일 압축
+        run: |
+          mkdir -p output
+          cp build/libs/app.jar output/app.jar
+          cd output && zip app.zip app.jar
+
+      - name: SSH 설정
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.BACKEND_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.BACKEND_IP }} >> ~/.ssh/known_hosts
+
+      - name: 서버로 app.zip 전송
+        run: scp output/app.zip ${{ secrets.BACKEND_USER }}@${{ secrets.BACKEND_IP }}:~/app.zip
+
+      - name: GCP 서버에서 배포 수행
+        run: |
+          ssh ${{ secrets.BACKEND_USER }}@${{ secrets.BACKEND_IP }} << 'EOF'
+            pkill -f 'java -jar' || true
+            unzip -o ~/app.zip -d ~/backend
+            nohup java -jar ~/backend/app.jar > ~/backend/spring.log 2>&1 &
+            rm ~/app.zip
+            echo "백엔드 배포 완료"
+          EOF
