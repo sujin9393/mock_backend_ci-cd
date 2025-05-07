@@ -20,23 +20,13 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Gradle 캐시 설정
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Gradle 빌드
+      - name: Gradle 빌드 (테스트 제외)
         run: ./gradlew build -x test
 
-      - name: jar 파일 압축
+      - name: JAR 압축 (자동으로 app.jar로 이름 변경)
         run: |
           mkdir -p output
-          cp build/libs/app.jar output/app.jar
+          cp build/libs/*.jar output/app.jar
           cd output && zip app.zip app.jar
 
       - name: SSH 설정
@@ -52,9 +42,11 @@ jobs:
       - name: GCP 서버에서 배포 수행
         run: |
           ssh ${{ secrets.BACKEND_USER }}@${{ secrets.BACKEND_IP }} << 'EOF'
-            pkill -f 'java -jar' || true
+            rm -rf ~/backend
+            mkdir -p ~/backend
             unzip -o ~/app.zip -d ~/backend
+            pkill -f 'java -jar' || true
             nohup java -jar ~/backend/app.jar > ~/backend/spring.log 2>&1 &
             rm ~/app.zip
-            echo "백엔드 배포 완료"
+            echo "✅ 백엔드 배포 완료"
           EOF
