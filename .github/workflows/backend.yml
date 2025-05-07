@@ -23,10 +23,11 @@ jobs:
       - name: Gradle 빌드 (테스트 제외)
         run: ./gradlew build -x test
 
-      - name: JAR 압축 (자동으로 app.jar로 이름 변경)
+      - name: JAR 압축 (자동 이름 탐색)
         run: |
           mkdir -p output
-          cp build/libs/*.jar output/app.jar
+          JAR_NAME=$(ls build/libs/*.jar | head -n 1)
+          cp "$JAR_NAME" output/app.jar
           cd output && zip app.zip app.jar
 
       - name: SSH 설정
