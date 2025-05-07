@@ -36,6 +36,8 @@ jobs:
           echo "${{ secrets.BACKEND_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.BACKEND_IP }} >> ~/.ssh/known_hosts
+          sudo apt update
+          sudo apt install openjdk-17-jdk -y
 
       - name: 서버로 app.zip 전송
         run: scp output/app.zip ${{ secrets.BACKEND_USER }}@${{ secrets.BACKEND_IP }}:~/app.zip
